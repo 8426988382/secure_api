@@ -1,10 +1,13 @@
 import sqlite3
 
+import jwt
+from flask import request
 from flask_restful import Resource, reqparse
 from flask_jwt import jwt_required
 
 from models.user import UserModel
 from models.card import CardModel
+from utils.util import secret_key
 
 
 class Card(Resource):
@@ -37,62 +40,83 @@ class Card(Resource):
     @classmethod
     @jwt_required()
     def get(cls, username):
-        username = username.lower()
-        if UserModel.find_by_username(username):
-            # bad query
-            # query = "SELECT * FROM cards WHERE id in (SELECT id FROM users WHERE username='" + username + "')"
+        try:
+            username = username.lower()
+            token = request.headers.get('Authorization')[4:]
+            _id = jwt.decode(token, secret_key).get('identity')
 
-            query = "SELECT * FROM cards WHERE id in (SELECT id FROM users WHERE username=?)"
+            user = UserModel.find_by_username(username)
 
-            connection = sqlite3.connect('data.db')
-            cursor = connection.cursor()
+            if user.id != _id:
+                return {'message': 'invalid token'}
 
-            cards = []
-            for _id, card_type, card_number, cvv, account_holder, phone_number in cursor.execute(query, (username,)):
-                cards.append(
-                    {
-                        "id": _id,
-                        "card_type": card_type,
-                        "card_no": card_number,
-                        "cvv": cvv,
-                        "account_holder": account_holder,
-                        "phone_number": phone_number,
-                    }
-                )
-            return {"username": username, "cards": cards}, 200
+            if user:
+                # bad query
+                # query = "SELECT * FROM cards WHERE id in (SELECT id FROM users WHERE username='" + username + "')"
 
-        return {'message': 'no user found'}
+                query = "SELECT * FROM cards WHERE id in (SELECT id FROM users WHERE username=?)"
+
+                connection = sqlite3.connect('data.db')
+                cursor = connection.cursor()
+
+                cards = []
+                for _id, card_type, card_number, cvv, account_holder, phone_number in cursor.execute(query,
+                                                                                                     (username,)):
+                    cards.append(
+                        {
+                            "id": _id,
+                            "card_type": card_type,
+                            "card_no": card_number,
+                            "cvv": cvv,
+                            "account_holder": account_holder,
+                            "phone_number": phone_number,
+                        }
+                    )
+                return {"username": username, "cards": cards}, 200
+
+            return {'message': 'no user found'}
+        except:
+            return {'message': 'token invalid or not provided'}
 
     @classmethod
     @jwt_required()
     def post(cls, username):
-        username = username.lower()
-        user = UserModel.find_by_username(username)
-        if user:
-            data = Card.parser.parse_args()
+        try:
+            username = username.lower()
+            user = UserModel.find_by_username(username)
 
-            _id = user.id
-            card_type = data['card_type']
-            card_no = data['card_no']
-            cvv = data['cvv']
-            account_holder = data['account_holder']
-            phone_number = data['phone_number']
+            token = request.headers.get('Authorization')[4:]
+            _id = jwt.decode(token, secret_key).get('identity')
 
-            # check if card with the provided number exists or not in the database
-            print("CARD NUMBER", card_no)
-            if CardModel.find_by_card_number(card_no):
-                return {'message': f'Card with {card_no} already exists'}
+            if user.id != _id:
+                return {'message': 'invalid token'}
+            if user:
+                data = Card.parser.parse_args()
 
-            query = "INSERT INTO cards VALUES (?,?, ?, ?, ?, ?) "
-            connection = sqlite3.connect('data.db')
-            cursor = connection.cursor()
-            cursor.execute(query, (_id, card_type, card_no, cvv, account_holder, phone_number))
+                _id = user.id
+                card_type = data['card_type']
+                card_no = data['card_no']
+                cvv = data['cvv']
+                account_holder = data['account_holder']
+                phone_number = data['phone_number']
 
-            connection.commit()
-            connection.close()
-            return {'message': 'card added'}, 201
+                # check if card with the provided number exists or not in the database
+                print("CARD NUMBER", card_no)
+                if CardModel.find_by_card_number(card_no):
+                    return {'message': f'Card with {card_no} already exists'}
 
-        return {'message': 'no user found'}, 404
+                query = "INSERT INTO cards VALUES (?,?, ?, ?, ?, ?) "
+                connection = sqlite3.connect('data.db')
+                cursor = connection.cursor()
+                cursor.execute(query, (_id, card_type, card_no, cvv, account_holder, phone_number))
+
+                connection.commit()
+                connection.close()
+                return {'message': 'card added'}, 201
+
+            return {'message': 'no user found'}, 404
+        except:
+            return {'message': 'token invalid or not provided'}
 
     # """
     # without using auth

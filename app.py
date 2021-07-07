@@ -10,6 +10,7 @@ from security import authenticate, identity
 from resources.user import UserRegister
 from resources.card import Card
 from db import db
+from utils.util import secret_key
 
 uri = os.environ.get('DATABASE_URL', 'sqlite:///data.db')
 if uri.startswith("postgres://"):
@@ -20,7 +21,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_EXPIRATION_DELTA'] = datetime.timedelta(100000)
 CORS(app)  # for cross platform interaction
-app.secret_key = '1234addfdg'
+app.secret_key = secret_key
 api = Api(app)
 
 db.init_app(app)
@@ -41,4 +42,4 @@ api.add_resource(UserRegister, '/user/register')
 api.add_resource(Card, '/card/<string:username>')
 
 if __name__ == '__main__':
-    app.run()  # debug=True removed
+    app.run(debug=True)  # debug=True removed
