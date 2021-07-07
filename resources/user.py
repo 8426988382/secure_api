@@ -23,6 +23,8 @@ class UserRegister(Resource):
         username = data['username']
         password = data['password']
 
+        username = username.lower()
+
         if password_check(password):
             if UserModel.find_by_username(username):
                 return {"message": "username is in use"}

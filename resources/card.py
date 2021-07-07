@@ -37,7 +37,7 @@ class Card(Resource):
     @classmethod
     @jwt_required()
     def get(cls, username):
-
+        username = username.lower()
         if UserModel.find_by_username(username):
             # bad query
             # query = "SELECT * FROM cards WHERE id in (SELECT id FROM users WHERE username='" + username + "')"
@@ -66,6 +66,7 @@ class Card(Resource):
     @classmethod
     @jwt_required()
     def post(cls, username):
+        username = username.lower()
         user = UserModel.find_by_username(username)
         if user:
             data = Card.parser.parse_args()
