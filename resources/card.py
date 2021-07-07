@@ -33,10 +33,6 @@ class Card(Resource):
                         required=True,
                         help='id is missing')
 
-    """
-    with auth
-    """
-
     @classmethod
     @jwt_required()
     def get(cls, username):
