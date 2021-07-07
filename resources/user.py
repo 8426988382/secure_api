@@ -25,6 +25,9 @@ class UserRegister(Resource):
 
         username = username.lower()
 
+        if username == '' or password == '':
+            return {'message': 'invalid username or password'}
+
         if password_check(password):
             if UserModel.find_by_username(username):
                 return {"message": "username is in use"}
