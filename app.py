@@ -1,4 +1,3 @@
-import datetime
 import os
 
 from flask import Flask
@@ -8,7 +7,7 @@ from flask_cors import CORS
 import datetime
 
 from security import authenticate, identity
-from resources.user import UserRegister, UserLogin
+from resources.user import UserRegister
 from resources.card import Card
 from db import db
 
@@ -35,12 +34,11 @@ def create_tables():
 """
 this will add an endpoint '/auth' for authentication of the user
 """
-# jwt = JWT(app, authenticate, identity)  # /auth
+jwt = JWT(app, authenticate, identity)  # /auth
 
 
 api.add_resource(UserRegister, '/user/register')
 api.add_resource(Card, '/card/<string:username>')
-api.add_resource(UserLogin, '/login')
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()  # debug=True removed

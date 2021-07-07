@@ -4,7 +4,6 @@ from db import db
 
 
 class UserModel(db.Model):
-
     __tablename__ = 'users'
 
     id = db.Column(db.Integer, primary_key=True)
@@ -18,17 +17,16 @@ class UserModel(db.Model):
 
     @classmethod
     def find_by_username(cls, username):
+
         connection = sqlite3.connect('data.db')
         cursor = connection.cursor()
 
-        # TODO: Improvement needed
-        query = "SELECT * FROM (SELECT * FROM users WHERE username='%s'" % username + ")"
-        result = cursor.execute(query)
+        # bad query
+        # query = "SELECT * FROM (SELECT * FROM users WHERE username='%s'" % username + ")"
+        # result = cursor.execute(query)
 
-        """
-        query = "SELECT * FROM users WHERE username=?'
-        result = cursor.execute(query, (username, ))
-        """
+        query = "SELECT * FROM users WHERE username=?"
+        result = cursor.execute(query, (username,))
 
         result = result.fetchone()
         if result:
@@ -44,14 +42,12 @@ class UserModel(db.Model):
         connection = sqlite3.connect('data.db')
         cursor = connection.cursor()
 
-        # TODO: Improvement needed
-        query = "SELECT * FROM users WHERE id='%s'" % userid
-        result = cursor.execute(query)
+        # bad query
+        # query = "SELECT * FROM users WHERE id='%s'" % userid
+        # result = cursor.execute(query)
 
-        """
         query = "SELECT * FROM users WHERE id=?"
-        result = cursor.execute(query, (userid, ))
-        """
+        result = cursor.execute(query, (userid,))
 
         result = result.fetchone()
         connection.close()
