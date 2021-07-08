@@ -38,6 +38,7 @@ this will add an endpoint '/auth' for authentication of the user
 jwt = JWT(app, authenticate, identity)  # /auth
 
 
+
 api.add_resource(UserRegister, '/user/register')
 api.add_resource(Card, '/card/<string:username>')
 

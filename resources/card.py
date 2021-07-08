@@ -3,7 +3,7 @@ import sqlite3
 import jwt
 from flask import request
 from flask_restful import Resource, reqparse
-from flask_jwt import jwt_required
+from flask_jwt import jwt_required, current_identity
 
 from models.user import UserModel
 from models.card import CardModel
@@ -36,15 +36,14 @@ class Card(Resource):
     @classmethod
     @jwt_required()
     def get(cls, username):
+        identity = current_identity
         try:
             username = username.lower()
-            token = request.headers.get('Authorization')[4:]
-            _id = jwt.decode(token, secret_key).get('identity')
 
             user = UserModel.find_by_username(username)
 
-            if user.id != _id:
-                return {'message': 'invalid token'}
+            if user.id != identity.id or user.username != identity.username:
+                return {'message': 'invalid token'}, 401
 
             if user:
                 # bad query
@@ -77,14 +76,12 @@ class Card(Resource):
     @classmethod
     @jwt_required()
     def post(cls, username):
+        identity = current_identity
         try:
             username = username.lower()
             user = UserModel.find_by_username(username)
 
-            token = request.headers.get('Authorization')[4:]
-            _id = jwt.decode(token, secret_key).get('identity')
-
-            if user.id != _id:
+            if user.id != identity.id or user.username != identity.username:
                 return {'message': 'invalid token'}
             if user:
                 data = Card.parser.parse_args()

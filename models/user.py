@@ -15,6 +15,9 @@ class UserModel(db.Model):
         self.username = username
         self.password = password
 
+    def __repr__(self):
+        return f"<{self.id}, {self.username}, {self.password}>"
+
     @classmethod
     def find_by_username(cls, username):
 
