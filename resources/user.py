@@ -1,7 +1,9 @@
 import sqlite3
-
+from hashlib import sha1
 from flask_restful import Resource, reqparse
+
 from models.user import UserModel
+from utils.util import secret_key
 
 
 class UserRegister(Resource):
@@ -32,12 +34,16 @@ class UserRegister(Resource):
             if UserModel.find_by_username(username):
                 return {"message": "username is in use"}
 
+            password = password + secret_key
+            hashed_password = sha1(password.encode('utf-8')).hexdigest()
+            # print(hashed_password.hexdigest())
+
             query = 'INSERT INTO users VALUES (NULL, ?, ?)'
 
             connection = sqlite3.connect('data.db')
             cursor = connection.cursor()
 
-            cursor.execute(query, (username, password))
+            cursor.execute(query, (username, hashed_password))
             connection.commit()
             connection.close()
 

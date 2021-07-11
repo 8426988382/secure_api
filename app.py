@@ -41,4 +41,4 @@ api.add_resource(UserRegister, '/user/register')
 api.add_resource(Card, '/card/<string:username>')
 
 if __name__ == '__main__':
-    app.run(debug=True)  # debug=True removed
+    app.run()  # debug=True removed
