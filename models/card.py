@@ -11,14 +11,16 @@ class CardModel(db.Model):
     cvv = db.Column(db.String)
     account_holder = db.Column(db.String(80))
     phone_number = db.Column(db.String(20))
+    expiry_date = db.Column(db.String)
 
-    def __init__(self, _id, card_type, card_number, cvv, account_holder, phone_number):
+    def __init__(self, _id, card_type, card_number, cvv, account_holder, phone_number, expiry_date):
         self.id = _id
         self.card_type = card_type
         self.card_no = card_number
         self.cvv = cvv
         self.account_holder = account_holder
         self.phone_number = phone_number
+        self.expiry_date = expiry_date
 
     @classmethod
     def find_by_card_number(cls, card_number):

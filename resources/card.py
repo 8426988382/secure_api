@@ -31,6 +31,10 @@ class Card(Resource):
                         type=str,
                         required=True,
                         help='id is missing')
+    parser.add_argument("expiry_date",
+                        type=str,
+                        required=True,
+                        help='expiry date is missing')
 
     @classmethod
     @jwt_required()
@@ -57,7 +61,7 @@ class Card(Resource):
                 cursor = connection.cursor()
 
                 cards = []
-                for _id, card_type, card_number, cvv, account_holder, phone_number in cursor.execute(query,
+                for _id, card_type, card_number, cvv, account_holder, phone_number, expiry_date in cursor.execute(query,
                                                                                                      (username,)):
                     cards.append(
                         {
@@ -66,7 +70,8 @@ class Card(Resource):
                             "card_no": f.decrypt(card_number).decode(),
                             "cvv": f.decrypt(cvv).decode(),
                             "account_holder": f.decrypt(account_holder).decode(),
-                            "phone_number": f.decrypt(phone_number).decode()
+                            "phone_number": f.decrypt(phone_number).decode(),
+                            "expiry_date": f.decrypt(expiry_date).decode()
                         }
                     )
                 return {"username": username, "cards": cards}, 200
@@ -99,18 +104,19 @@ class Card(Resource):
                 cvv = f.encrypt(data['cvv'].encode())
                 account_holder = f.encrypt(data['account_holder'].encode())
                 phone_number = f.encrypt(data['phone_number'].encode())
+                expiry_date = f.encrypt(data['expiry_date'].encode())
 
-                data = {_id, card_type, card_no, cvv, account_holder, phone_number}
+                data = {_id, card_type, card_no, cvv, account_holder, phone_number, expiry_date}
                 print(data)
 
                 # check if card with the provided number exists or not in the database
                 if CardModel.find_by_card_number(card_no):
-                    return {'message': f'Card with {card_no} already exists'}
+                    return {'message': 'Card already exists'}
 
-                query = "INSERT INTO cards VALUES (?,?, ?, ?, ?, ?)"
+                query = "INSERT INTO cards VALUES (?, ?, ?, ?, ?, ?, ?)"
                 connection = sqlite3.connect('data.db')
                 cursor = connection.cursor()
-                cursor.execute(query, (_id, card_type, card_no, cvv, account_holder, phone_number))
+                cursor.execute(query, (_id, card_type, card_no, cvv, account_holder, phone_number, expiry_date))
 
                 connection.commit()
                 connection.close()
