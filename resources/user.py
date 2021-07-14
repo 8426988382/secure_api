@@ -1,9 +1,9 @@
 import sqlite3
-from hashlib import sha1
+import bcrypt
+import re
 from flask_restful import Resource, reqparse
 
 from models.user import UserModel
-from utils.util import secret_key
 
 
 class UserRegister(Resource):
@@ -21,71 +21,46 @@ class UserRegister(Resource):
     @classmethod
     def post(cls):
 
-        data = cls.parser.parse_args()
-        username = data['username']
-        password = data['password']
+        try:
+            data = cls.parser.parse_args()
+            username = data['username']
+            password = data['password']
 
-        username = username.lower()
+            if username == '' or password == '':
+                return {'message': 'invalid username or password'}
 
-        if username == '' or password == '':
-            return {'message': 'invalid username or password'}
+            if not check(username):
+                return {'message': 'invalid username'}, 400
 
-        if password_check(password):
-            if UserModel.find_by_username(username):
-                return {"message": "username is in use"}
+            if password_check(password):
+                if UserModel.find_by_username(username):
+                    return {"message": "username is in use"}
 
-            password = password + secret_key
-            hashed_password = sha1(password.encode('utf-8')).hexdigest()
-            # print(hashed_password.hexdigest())
+                username = username.lower()
+                # first method
+                # password = password + secret_key
+                # hashed_password = sha1(password.encode('utf-8')).hexdigest()
+                hashed_password = bcrypt.hashpw(password.encode(), bcrypt.gensalt())
 
-            query = 'INSERT INTO users VALUES (NULL, ?, ?)'
+                query = 'INSERT INTO users VALUES (NULL, ?, ?)'
 
-            connection = sqlite3.connect('data.db')
-            cursor = connection.cursor()
+                connection = sqlite3.connect('data.db')
+                cursor = connection.cursor()
 
-            cursor.execute(query, (username, hashed_password))
-            connection.commit()
-            connection.close()
+                cursor.execute(query, (username, hashed_password))
+                connection.commit()
+                connection.close()
 
-            return {'message': 'user_created'}, 201
+                return {'message': 'user_created'}, 201
 
-        return {'message': 'password too weak'}
+            return {'message': 'password too weak'}
+
+        except UnableToProcess:
+            return {'message', 'unable to process your request'}, 400
 
 
-# class UserLogin(Resource):
-#     @classmethod
-#     def get(cls):
-#         username = request.args.get('username')
-#         password = request.args.get('password')
-#
-#         if username is None:
-#             return {'message': 'invalid username'}
-#         if password is None:
-#             return {'message': 'password cannot be empty'}
-#
-#         if UserModel.find_by_username(username):
-#
-#             query = "SELECT * FROM cards WHERE id in (SELECT id from users WHERE username='" + username + \
-#                     "' AND password='" + password + "')"
-#
-#             connection = sqlite3.connect('data.db')
-#             cursor = connection.cursor()
-#
-#             cards = []
-#             for _id, card_type, card_number, cvv, account_holder, phone_number in cursor.execute(query):
-#                 cards.append(
-#                     {
-#                         "id": _id,
-#                         "card_type": card_type,
-#                         "card_no": card_number,
-#                         "cvv": cvv,
-#                         "account_holder": account_holder,
-#                         "phone_number": phone_number,
-#                     }
-#                 )
-#             return {"username": username, "cards": cards}, 200
-#
-#         return {'message': 'username not found'}, 404
+class UnableToProcess(Exception):
+    pass
 
 
 def password_check(s):
@@ -109,3 +84,12 @@ def password_check(s):
             if i == '@' or i == '$' or i == '_':
                 p += 1
     return l >= 1 and u >= 1 and p >= 1 and d >= 1 and l + p + u + d == len(s)
+
+
+# checking for any special character
+def check(string):
+    regex = re.compile("['@_!#$%^&*()<>?/|}{~:]")
+    if regex.search(string) is None:
+        return True
+    else:
+        return False

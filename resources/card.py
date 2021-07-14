@@ -1,13 +1,12 @@
 import sqlite3
+import re
+from utils.util import f
 
-import jwt
-from flask import request
 from flask_restful import Resource, reqparse
 from flask_jwt import jwt_required, current_identity
 
 from models.user import UserModel
 from models.card import CardModel
-from utils.util import secret_key
 
 
 class Card(Resource):
@@ -17,11 +16,11 @@ class Card(Resource):
                         required=True,
                         help='card_number is missing')
     parser.add_argument("card_no",
-                        type=int,
+                        type=str,
                         required=True,
                         help='card_number is missing')
     parser.add_argument("cvv",
-                        type=int,
+                        type=str,
                         required=True,
                         help='cvv is missing')
     parser.add_argument("account_holder",
@@ -36,16 +35,19 @@ class Card(Resource):
     @classmethod
     @jwt_required()
     def get(cls, username):
-        identity = current_identity
         try:
+            identity = current_identity
+            if not check(username):
+                return {'message': 'invalid username or password'}, 401
             username = username.lower()
 
             user = UserModel.find_by_username(username)
 
-            if user.id != identity.id or user.username != identity.username:
-                return {'message': 'invalid token'}, 401
-
             if user:
+
+                if user.id != identity.id or user.username != identity.username:
+                    return {'message': 'invalid token'}, 401
+
                 # bad query
                 # query = "SELECT * FROM cards WHERE id in (SELECT id FROM users WHERE username='" + username + "')"
 
@@ -60,45 +62,52 @@ class Card(Resource):
                     cards.append(
                         {
                             "id": _id,
-                            "card_type": card_type,
-                            "card_no": card_number,
-                            "cvv": cvv,
-                            "account_holder": account_holder,
-                            "phone_number": phone_number,
+                            "card_type": f.decrypt(card_type).decode(),
+                            "card_no": f.decrypt(card_number).decode(),
+                            "cvv": f.decrypt(cvv).decode(),
+                            "account_holder": f.decrypt(account_holder).decode(),
+                            "phone_number": f.decrypt(phone_number).decode()
                         }
                     )
                 return {"username": username, "cards": cards}, 200
+            else:
+                return {'message': 'no user found'}
 
-            return {'message': 'no user found'}
-        except:
-            return {'message': 'token invalid or not provided'}
+        except ErrorException:
+            return {'message': 'some error has occurred'}
 
     @classmethod
     @jwt_required()
     def post(cls, username):
-        identity = current_identity
+
         try:
+            identity = current_identity
+            if not check(username):
+                return {'message': 'invalid username or password'}, 401
             username = username.lower()
             user = UserModel.find_by_username(username)
 
-            if user.id != identity.id or user.username != identity.username:
-                return {'message': 'invalid token'}
             if user:
+                if user.id != identity.id or user.username != identity.username:
+                    return {'message': 'invalid token'}
+
                 data = Card.parser.parse_args()
 
                 _id = user.id
-                card_type = data['card_type']
-                card_no = data['card_no']
-                cvv = data['cvv']
-                account_holder = data['account_holder']
-                phone_number = data['phone_number']
+                card_type = f.encrypt(data['card_type'].encode())
+                card_no = f.encrypt(data['card_no'].encode())
+                cvv = f.encrypt(data['cvv'].encode())
+                account_holder = f.encrypt(data['account_holder'].encode())
+                phone_number = f.encrypt(data['phone_number'].encode())
+
+                data = {_id, card_type, card_no, cvv, account_holder, phone_number}
+                print(data)
 
                 # check if card with the provided number exists or not in the database
-                print("CARD NUMBER", card_no)
                 if CardModel.find_by_card_number(card_no):
                     return {'message': f'Card with {card_no} already exists'}
 
-                query = "INSERT INTO cards VALUES (?,?, ?, ?, ?, ?) "
+                query = "INSERT INTO cards VALUES (?,?, ?, ?, ?, ?)"
                 connection = sqlite3.connect('data.db')
                 cursor = connection.cursor()
                 cursor.execute(query, (_id, card_type, card_no, cvv, account_holder, phone_number))
@@ -106,74 +115,25 @@ class Card(Resource):
                 connection.commit()
                 connection.close()
                 return {'message': 'card added'}, 201
-
-            return {'message': 'no user found'}, 404
-        except:
+            else:
+                return {'message': 'no user exist'}, 404
+        except TokenInvalidException:
             return {'message': 'token invalid or not provided'}
 
-    # """
-    # without using auth
-    # """
-    #
-    # @classmethod
-    # def get(cls, username):
-    #
-    #     if UserModel.find_by_username(username):
-    #         query = "SELECT * FROM cards WHERE id in (SELECT id FROM users WHERE username='" + username + "')"
-    #
-    #         connection = sqlite3.connect('data.db')
-    #         cursor = connection.cursor()
-    #
-    #         """
-    #         query = "SELECT * FROM cards WHERE id in (SELECT id FROM users WHERE username=?)"
-    #
-    #         connection = sqlite3.connect('data.db')
-    #         cursor = connection.cursor()
-    #         cursor.execute(query, (username, ))
-    #         """
-    #
-    #         cards = []
-    #         for _id, card_type, card_number, cvv, account_holder, phone_number in cursor.execute(query):
-    #             cards.append(
-    #                 {
-    #                     "id": _id,
-    #                     "card_type": card_type,
-    #                     "card_no": card_number,
-    #                     "cvv": cvv,
-    #                     "account_holder": account_holder,
-    #                     "phone_number": phone_number,
-    #                 }
-    #             )
-    #         return {"username": username, "cards": cards}, 200
-    #
-    #     return {'message': 'no user found'}
-    #
-    # @classmethod
-    # def post(cls, username):
-    #     user = UserModel.find_by_username(username)
-    #     if user:
-    #         data = Card.parser.parse_args()
-    #
-    #         _id = user.id
-    #         card_type = data['card_type']
-    #         card_no = data['card_no']
-    #         cvv = data['cvv']
-    #         account_holder = data['account_holder']
-    #         phone_number = data['phone_number']
-    #
-    #         # check if card with the provided number exists or not in the database
-    #         print("CARD NUMBER", card_no)
-    #         if CardModel.find_by_card_number(card_no):
-    #             return {'message': f'Card with {card_no} already exists'}
-    #
-    #         # TODO: improvement needed
-    #         query = "INSERT INTO cards VALUES (?,?, ?, ?, ?, ?) "
-    #         connection = sqlite3.connect('data.db')
-    #         cursor = connection.cursor()
-    #         cursor.execute(query, (_id, card_type, card_no, cvv, account_holder, phone_number))
-    #
-    #         connection.commit()
-    #         connection.close()
-    #         return {'message': 'card added'}, 201
-    #
-    #     return {'message': 'no user found'}, 404
+
+class TokenInvalidException(Exception):
+    pass
+
+
+class ErrorException(Exception):
+    pass
+
+
+# checking for any special character
+def check(string):
+    regex = re.compile("['@_!#$%^&*()<>?/|}{~:]")
+    if regex.search(string) is None:
+        return True
+
+    else:
+        return False

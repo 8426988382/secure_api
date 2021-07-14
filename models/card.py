@@ -7,8 +7,8 @@ class CardModel(db.Model):
     __tablename__ = 'cards'
     id = db.Column(db.Integer)
     card_type = db.Column(db.String(30))
-    card_no = db.Column(db.Integer, primary_key=True)
-    cvv = db.Column(db.Integer)
+    card_no = db.Column(db.String, primary_key=True)
+    cvv = db.Column(db.String)
     account_holder = db.Column(db.String(80))
     phone_number = db.Column(db.String(20))
 
