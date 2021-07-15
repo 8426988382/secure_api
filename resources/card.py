@@ -1,9 +1,13 @@
 import sqlite3
 import re
-from utils.util import f
+import jwt
+import base64
+
+from flask import request
+from utils.util import f, secret_key
 
 from flask_restful import Resource, reqparse
-from flask_jwt import jwt_required, current_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from models.user import UserModel
 from models.card import CardModel
@@ -40,16 +44,16 @@ class Card(Resource):
     @jwt_required()
     def get(cls, username):
         try:
-            identity = current_identity
             if not check(username):
                 return {'message': 'invalid username or password'}, 401
             username = username.lower()
 
+            identity = get_jwt_identity()['identity']
             user = UserModel.find_by_username(username)
+            user_identity = UserModel.find_by_userid(identity)
 
             if user:
-
-                if user.id != identity.id or user.username != identity.username:
+                if user.id != user_identity.id or user.username != user_identity.username:
                     return {'message': 'invalid token'}, 401
 
                 # bad query
@@ -62,7 +66,8 @@ class Card(Resource):
 
                 cards = []
                 for _id, card_type, card_number, cvv, account_holder, phone_number, expiry_date in cursor.execute(query,
-                                                                                                     (username,)):
+                                                                                                                  (
+                                                                                                                          username,)):
                     cards.append(
                         {
                             "id": _id,
@@ -76,7 +81,7 @@ class Card(Resource):
                     )
                 return {"username": username, "cards": cards}, 200
             else:
-                return {'message': 'no user found'}
+                return {'message': 'no user found'}, 404
 
         except ErrorException:
             return {'message': 'some error has occurred'}
@@ -86,15 +91,41 @@ class Card(Resource):
     def post(cls, username):
 
         try:
-            identity = current_identity
+            identity = get_jwt_identity()['identity']
+            verify_csrf_token = request.headers['X-CSRFToken']
+
+            token = request.cookies.get('token')
+            with open('token.txt', 'w') as file:
+                file.write(token)
+
+            if token_check(token) == -1:
+                return {'message': 'invalid token in token check'}, 401
+
+            data = jwt.decode(token, secret_key, algorithms=['HS256'])
+
+            sub = data.get('sub')
+
+            if sub is None:
+                return {'message': 'invalid token'}, 401
+
+            csrf_token = sub.get('csrf_token')
+
+            if csrf_token is None:
+                return {'message': 'token missing'}, 401
+
+            if csrf_token != verify_csrf_token:
+                return {'message': 'login required'}, 401
+
             if not check(username):
                 return {'message': 'invalid username or password'}, 401
+
             username = username.lower()
             user = UserModel.find_by_username(username)
+            user_identity = UserModel.find_by_userid(identity)
 
             if user:
-                if user.id != identity.id or user.username != identity.username:
-                    return {'message': 'invalid token'}
+                if user.id != user_identity.id or user.username != user_identity.username:
+                    return {'message': 'invalid token'}, 401
 
                 data = Card.parser.parse_args()
 
@@ -105,9 +136,6 @@ class Card(Resource):
                 account_holder = f.encrypt(data['account_holder'].encode())
                 phone_number = f.encrypt(data['phone_number'].encode())
                 expiry_date = f.encrypt(data['expiry_date'].encode())
-
-                data = {_id, card_type, card_no, cvv, account_holder, phone_number, expiry_date}
-                print(data)
 
                 # check if card with the provided number exists or not in the database
                 if CardModel.find_by_card_number(card_no):
@@ -124,7 +152,7 @@ class Card(Resource):
             else:
                 return {'message': 'no user exist'}, 404
         except TokenInvalidException:
-            return {'message': 'token invalid or not provided'}
+            return {'message': 'token invalid or not provided'}, 400
 
 
 class TokenInvalidException(Exception):
@@ -142,4 +170,43 @@ def check(string):
         return True
 
     else:
+        return False
+
+
+def token_check(token):
+    try:
+        # 1. verify that the token has three components
+        components = token.split('.')
+        signature = components[2]
+        if len(components) != 3:
+            return -1
+
+        # 2. check algorithm
+        header = jwt.get_unverified_header(token)
+        algorithm = header.get('alg')
+        if algorithm is None or algorithm == 'RS256':
+            return -1
+
+        # verifying the signature
+        payload = jwt.decode(token, secret_key, algorithms=['HS256'])
+
+        encoded_jwt = jwt.encode(
+            payload,
+            secret_key,
+            algorithm='HS256',
+            headers=header
+        )
+
+        if encoded_jwt != token:
+            return -1
+        return 1
+    except Exception as e:
+        print(e.args)
+        return -1
+
+
+def is_base64(s):
+    try:
+        return base64.b64encode(base64.b64decode(s)) == s
+    except Exception:
         return False

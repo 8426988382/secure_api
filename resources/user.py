@@ -1,28 +1,36 @@
 import sqlite3
 import bcrypt
 import re
+
+from flask import make_response
 from flask_restful import Resource, reqparse
+import flask_wtf
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+)
 
 from models.user import UserModel
 
+parser = reqparse.RequestParser()
+parser.add_argument('username',
+                    type=str,
+                    required=True,
+                    help='username required')
+
+parser.add_argument('password',
+                    type=str,
+                    required=True,
+                    help='password required')
+
 
 class UserRegister(Resource):
-    parser = reqparse.RequestParser()
-    parser.add_argument('username',
-                        type=str,
-                        required=True,
-                        help='username required')
-
-    parser.add_argument('password',
-                        type=str,
-                        required=True,
-                        help='password required')
 
     @classmethod
     def post(cls):
 
         try:
-            data = cls.parser.parse_args()
+            data = parser.parse_args()
             username = data['username']
             password = data['password']
 
@@ -57,6 +65,39 @@ class UserRegister(Resource):
 
         except UnableToProcess:
             return {'message', 'unable to process your request'}, 400
+
+
+class UserLogin(Resource):
+    @classmethod
+    def post(cls):
+        data = parser.parse_args()
+        user = UserModel.find_by_username(data['username'])
+
+        if user is None:
+            return {'message': 'invalid username or password'}, 401
+
+        if user and bcrypt.checkpw(data['password'].encode(), user.password):
+            crsf_token = flask_wtf.csrf.generate_csrf()
+            identity = {
+                "identity": user.id,
+                "csrf_token": crsf_token
+            }
+            access_token = create_access_token(identity=identity, fresh=True)
+            refresh_token = create_refresh_token(user.id)
+
+            response = make_response({
+                       "access_token": access_token,
+                       "refresh_token": refresh_token,
+                       "csrf_token": crsf_token
+                   }, 200)
+
+            response.set_cookie('token', access_token)
+
+            return response
+
+        return {
+                   "message": "invalid username or password",
+               }, 401
 
 
 class UnableToProcess(Exception):
