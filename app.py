@@ -22,11 +22,6 @@ app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['PROPAGATE_EXCEPTIONS'] = True
-app.config['JWT_SESSION_COOKIE'] = True
-app.config['JWT_COOKIE_SECURE'] = True
-app.config['SESSION_COOKIE_SECURE'] = False
-app.config['JWT_CSRF_IN_COOKIES'] = True
-app.config['JWT_COOKIE_CSRF_PROTECT'] = False
 app.config['JWT_EXPIRATION_DELTA'] = datetime.timedelta(100000)
 CORS(app)  # for cross platform interaction
 app.secret_key = secret_key
