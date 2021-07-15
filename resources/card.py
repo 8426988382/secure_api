@@ -150,7 +150,7 @@ class Card(Resource):
                     {'message': 'card added'},
                     201
                 )
-                response.headers.add('Access-Control-Allow-Credentials', True)
+                response.headers.add('Access-Control-Allow-Credentials', "true")
                 return response
             else:
                 return {'message': 'no user exist'}, 404
