@@ -3,7 +3,7 @@ import bcrypt
 import re
 
 import flask_jwt_extended
-from flask import make_response
+from flask import make_response, redirect, url_for
 from flask_restful import Resource, reqparse
 import flask_wtf
 from flask_jwt_extended import (
@@ -87,12 +87,15 @@ class UserLogin(Resource):
             refresh_token = create_refresh_token(user.id)
 
             response = make_response({
-                       "access_token": access_token,
-                       "refresh_token": refresh_token,
-                       "csrf_token": crsf_token
-                   }, 200)
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "csrf_token": crsf_token
+            })
 
             response.set_cookie('token', access_token)
+            response.headers.add("Access-Control-Allow-Origin", "*")
+            response.headers.add('Access-Control-Allow-Headers', "*")
+            response.headers.add('Access-Control-Allow-Methods', "*")
 
             return response
 

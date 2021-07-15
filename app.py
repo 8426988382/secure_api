@@ -25,6 +25,7 @@ app.config['SESSION_COOKIE_SECURE'] = False
 app.config['PROPAGATE_EXCEPTIONS'] = True
 app.config['JWT_EXPIRATION_DELTA'] = datetime.timedelta(100000)
 CORS(app)  # for cross platform interaction
+app.config['CORS_HEADERS'] = 'Content-Type'
 app.secret_key = secret_key
 
 
