@@ -93,7 +93,7 @@ class UserLogin(Resource):
             })
 
             response.set_cookie('token', access_token)
-            response.headers.add('Access-Control-Allow-Credentials', True)
+            response.headers.add('Access-Control-Allow-Credentials', "true")
 
             return response
 
