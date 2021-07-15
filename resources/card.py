@@ -3,7 +3,7 @@ import re
 import jwt
 import base64
 
-from flask import request
+from flask import request, make_response
 from utils.util import f, secret_key
 
 from flask_restful import Resource, reqparse
@@ -146,7 +146,12 @@ class Card(Resource):
 
                 connection.commit()
                 connection.close()
-                return {'message': 'card added'}, 201
+                response = make_response(
+                    {'message': 'card added'},
+                    201
+                )
+                response.headers.add('Access-Control-Allow-Credentials', True)
+                return response
             else:
                 return {'message': 'no user exist'}, 404
         except TokenInvalidException:
