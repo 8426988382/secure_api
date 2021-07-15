@@ -93,6 +93,7 @@ class UserLogin(Resource):
             })
 
             response.set_cookie('token', access_token, samesite=None, secure=True)
+            response.headers.add('Access-Control-Allow-Origin', 'https://secure-restapi.herokuapp.com')
 
             return response
 
