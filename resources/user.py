@@ -92,8 +92,8 @@ class UserLogin(Resource):
                 "csrf_token": crsf_token
             })
 
-            response.set_cookie('token', access_token)
-            response.headers.add('Access-Control-Allow-Credentials', "true")
+            response.set_cookie('token', access_token, samesite=None, secure=True)
+            response.headers.add('Access-Control-Allow-Credentials', True)
 
             return response
 
