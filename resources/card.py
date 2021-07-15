@@ -95,8 +95,6 @@ class Card(Resource):
             verify_csrf_token = request.headers['X-CSRFToken']
 
             token = request.cookies.get('token')
-            with open('token.txt', 'w') as file:
-                file.write(token)
 
             if token_check(token) == -1:
                 return {'message': 'invalid token in token check'}, 401

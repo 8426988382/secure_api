@@ -62,4 +62,4 @@ api.add_resource(Card, '/card/<string:username>')
 api.add_resource(UserLogin, '/auth')
 
 if __name__ == '__main__':
-    app.run(debug=True)  # debug=True removed
+    app.run()  # debug=True removed
