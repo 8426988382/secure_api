@@ -2,6 +2,7 @@ import sqlite3
 import bcrypt
 import re
 
+import flask_jwt_extended
 from flask import make_response
 from flask_restful import Resource, reqparse
 import flask_wtf
